@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\ProductsImport;
+use App\Exports\ProductsExport;
 
 class ProductController extends Controller
 {
@@ -30,8 +32,8 @@ class ProductController extends Controller
         $categories = Category::all();
         return view('admin.product.create', compact('categories', 'ingredients'));
     }
- public function store(Request $request)
-{
+    public function store(Request $request)
+    {
         DB::beginTransaction();
 
         try {
@@ -60,13 +62,13 @@ class ProductController extends Controller
             ]);
 
             // Handle image upload
- $imagePath = null;
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time() . '.' . $image->extension();
-            $image->move(public_path('storage'), $imageName);
-            $imagePath = $imageName;
-        }
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = time() . '.' . $image->extension();
+                $image->move(public_path('storage'), $imageName);
+                $imagePath = $imageName;
+            }
             // Create product
             $product = Product::create([
                 'category_id' => $validated['category_id'],
@@ -108,11 +110,9 @@ class ProductController extends Controller
             return redirect()
                 ->route('products.index')
                 ->with('success', 'Product created successfully');
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
             return back()->withErrors($e->validator)->withInput();
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -125,7 +125,7 @@ class ProductController extends Controller
                 ->withInput()
                 ->with('error', 'Error creating product: ' . $e->getMessage());
         }
-        }
+    }
 
     public function edit(Product $product)
     {
@@ -249,35 +249,56 @@ class ProductController extends Controller
         // Flash message for error if not found
         return redirect()->route('products.index')->with('error', 'Product or image not found.');
     }
-    public function getProductByBarcode(Request $request)
-    {
-        $barcode = $request->input('barcode');
-        Log::info('Barcode scanned: ' . $barcode);
+ public function getProductByBarcode(Request $request)
+{
+    $barcode = $request->input('barcode');
+    Log::info('Barcode scanned: ' . $barcode);
 
-        $product = Product::with('ingredients')->where('barcode', $barcode)->first();
+    $product = Product::with('ingredients')->where('barcode', $barcode)->first();
 
-        if ($product) {
-            Log::info('Product found: ' . $product->name);
+    if ($product) {
+        Log::info('Product found: ' . $product->name);
 
-            // Check if discount is currently active
-            $hasDiscount = $product->discount > 0 && now()->between($product->discount_start, $product->discount_end);
-            $discountedPrice = $hasDiscount
-                ? $product->price - ($product->price * ($product->discount / 100))
-                : null;
-
-            return response()->json([
-                'id' => $product->id,
-                'name' => $product->name,
-                'price' => $product->price,
-                'discounted_price' => $discountedPrice,
-                'brand' => $product->brand,
-                'image_url' => $product->image,
-                'ingredients' => $product->ingredients->pluck('name'),
-                'reviews_count' => $product->reviews_count ?? $product->reviews()->count(),
-            ]);
-        } else {
-            Log::warning('Product not found for barcode: ' . $barcode);
-            return response()->json(['message' => 'Product not found'], 404);
+        // Safe check for discount validity
+        $hasDiscount = false;
+        if ($product->discount > 0 && $product->discount_start && $product->discount_end) {
+            $hasDiscount = now()->between($product->discount_start, $product->discount_end);
         }
+
+        $discountedPrice = $hasDiscount
+            ? $product->price - ($product->price * ($product->discount / 100))
+            : null;
+
+        return response()->json([
+            'id' => $product->id,
+            'name' => $product->name,
+            'price' => $product->price,
+            'discounted_price' => $discountedPrice,
+            'brand' => $product->brand,
+            'image_url' => $product->image,
+            'ingredients' => $product->ingredients->pluck('name'),
+            'reviews_count' => $product->reviews_count ?? $product->reviews()->count(),
+        ]);
+    } else {
+        Log::warning('Product not found for barcode: ' . $barcode);
+        return response()->json(['message' => 'Product not found'], 404);
+    }
+}
+
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,csv',
+        ]);
+
+        Excel::import(new ProductsImport, $request->file('file'));
+
+        return back()->with('success', 'Products imported successfully.');
+    }
+
+    public function export()
+    {
+        return Excel::download(new ProductsExport, 'products.xlsx');
     }
 }

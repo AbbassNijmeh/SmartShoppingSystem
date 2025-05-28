@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\Product;
 use App\Models\OrderItem;
 use App\Models\UserAddress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AdminOrderNotificationMail;
+use App\Mail\OrderNotification;
 
 class PaymentController extends Controller
 {
@@ -37,11 +41,6 @@ class PaymentController extends Controller
 
         return view('site.checkout', compact('cartItems', 'total', 'addresses'));
     }
-
-
-
-
-
     public function process(Request $request)
     {
         $user = Auth::user();
@@ -149,18 +148,63 @@ class PaymentController extends Controller
             ]);
 
             $product = Product::find($itemData['product_id']);
+
+            // Decrement the stock quantity
+            if ($product) {
+                $product->stock_quantity -= $itemData['quantity'];
+                $product->save();
+            }
+
             // app(RecommendationController::class)->logPurchase($product, Auth::id());
         }
-
-        Payment::create([
-            'user_id' => $user->id,
-            'order_id' => $order->id,
-            'payment_method' => $request->payment_method,
-            'total_amount' => $totalPrice,
-        ]);
-
+        // if payment method is payment_link then dont create payment
+        if ($request->payment_method !== 'payment_link') {
+            Payment::create([
+                'user_id' => $user->id,
+                'order_id' => $order->id,
+                'payment_method' => $request->payment_method,
+                'total_amount' => $totalPrice,
+            ]);
+        } elseif ($request->payment_method === 'payment_link') {
+            $order->status = 'not_paid';
+            $order->save();
+            $this->generatePaymentLink();
+        }
+        $email = new OrderNotification($order, $order->status);
+        $sentmail = Mail::to($user->email)->send($email);
+        //dd($sentmail);
         Cart::where('user_id', $user->id)->delete();
 
         return redirect()->route('home')->with('success', 'Order placed successfully!');
+    }
+
+    public function generatePaymentLink()
+    {
+        $user = Auth::user();
+
+        // Send an email to the admin
+        Mail::to('abbassnijmeh11@gmail.com.com')->send(new \App\Mail\AdminPaymentLinkRequest($user));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Your request has been sent to the admin. You will receive a payment link soon. Please check your order history',
+        ]);
+    }
+
+    public function markAsPaid(Order $order)
+    {
+        // Ensure the user owns the order
+        if ($order->user_id !== Auth::id()) {
+            return redirect()->route('orders.history')->with('error', 'Unauthorized action.');
+        }
+
+        // Update the order status to 'payment_pending'
+        $order->status = 'payment_pending';
+        $order->save();
+
+        // Notify the admin (optional)
+        Mail::to('admin@example.com')->send(new \App\Mail\AdminOrderNotificationMail($order));
+
+        return redirect()->route('orders.history')->with('success', 'Your payment confirmation has been sent to the admin.');
     }
 }

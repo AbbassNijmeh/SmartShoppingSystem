@@ -12,6 +12,7 @@ class Product extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'id',
         'category_id',
         'name',
         'description',
@@ -49,6 +50,15 @@ class Product extends Model
     public function ingredients()
 {
     return $this->belongsToMany(Ingredient::class, 'ingredient_product');
+}
+// In Product model
+public function isDiscountActive()
+{
+    return $this->discount > 0
+        && $this->discount_start !== null
+        && $this->discount_end !== null
+        && $this->discount_start <= now()
+        && $this->discount_end >= now();
 }
 
 }

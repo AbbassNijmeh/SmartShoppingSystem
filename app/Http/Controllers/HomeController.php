@@ -45,9 +45,15 @@ class HomeController extends Controller
             ->where('stock_quantity', '>', 0)
             ->orderByDesc('avg_rating')
             ->orderByDesc('total_sold')
-            ->get();
+            ->get()
+            ->shuffle();
+            //get products with maximum discount
+        $offersproducts = $products->sortByDesc(function ($product) {
+            return $product->discount > 0 ? $product->price - ($product->price * ($product->discount / 100)) : $product->price;
+        })->take(3);
+        // Get all categories
         $categories = Category::all();
-        return view('welcome', compact('products', 'categories'));
+        return view('welcome', compact('products', 'categories','offersproducts'));
     }
 
     public function showDashboard()
@@ -173,9 +179,14 @@ class HomeController extends Controller
                 ->whereIn('id', $userAllergyIngredients);
         }
         // app(RecommendationController::class)->logView($product, Auth::id());
-
+        //get all products of the same category
+        $recommendedProducts = Product::where('category_id', $product->category_id)
+            ->where('id', '!=', $product->id)
+            ->where('stock_quantity', '>', 0)
+            ->take(4)
+            ->get();
         $total = $product->orderItems->sum('quantity');
-        return view('site.singleProduct', compact('product', 'total', 'allergicIngredients'));
+        return view('site.singleProduct', compact('product', 'total', 'allergicIngredients','recommendedProducts'));
     }
     function showUserProfile()
     {

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('body')
-<section class="hero-wrap hero-wrap-2" style="background-image: url({{asset('assets/img/bg-1.jpg')}});"
+<section class="hero-wrap hero-wrap-2" style="background-image: url({{asset('assets/img/bg-2.jpg')}});"
     data-stellar-background-ratio="0.5">
     <div class="overlay"></div>
     <div class="container">
@@ -129,7 +129,9 @@
                         <label><input type="radio" name="payment_method" value="credit_card" checked
                                 onchange="togglePaymentMethod()"> Visa Card</label><br>
                         <label><input type="radio" name="payment_method" value="paypal"
-                                onchange="togglePaymentMethod()"> PayPal</label>
+                                onchange="togglePaymentMethod()"> PayPal</label><br>
+                        <label><input type="radio" name="payment_method" value="payment_link"
+                                onchange="togglePaymentMethod()"> Generate Payment Link</label>
                     </div>
 
                     <div id="visa-form">
@@ -143,6 +145,10 @@
                         <input type="email" name="paypal_email" class="form-control" placeholder="PayPal Email">
                     </div>
 
+                    <div id="payment-link-info" style="display:none;">
+                        <p>By selecting this option, a payment link will be generated and sent to the admin for processing.</p>
+                    </div>
+
                     <input type="hidden" name="selected_payment_method" id="selected_payment_method"
                         value="credit_card">
 
@@ -150,6 +156,8 @@
                         <button type="button" class="btn btn-primary py-3 px-4" onclick="submitCheckout()">Confirm
                             Order</button>
                     </div>
+
+
                 </form>
             </div>
         </div>
@@ -163,6 +171,7 @@
         const method = document.querySelector('input[name="payment_method"]:checked').value;
         document.getElementById('visa-form').style.display = method === 'credit_card' ? 'block' : 'none';
         document.getElementById('paypal-form').style.display = method === 'paypal' ? 'block' : 'none';
+        document.getElementById('payment-link-info').style.display = method === 'payment_link' ? 'block' : 'none';
         document.getElementById('selected_payment_method').value = method;
     }
 
@@ -217,6 +226,33 @@
 
     function submitCheckout() {
         document.getElementById('checkout-form').submit();
+    }
+
+    function requestPaymentLink() {
+        // Example: Make an AJAX request to generate a payment link
+        fetch(`{{ route('payment.link') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                // Include any necessary data here, e.g., order details
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Payment link generated: ' + data.link);
+                // Optionally redirect or display the link
+            } else {
+                alert('Failed to generate payment link.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while generating the payment link.');
+        });
     }
 
     document.addEventListener('DOMContentLoaded', function () {

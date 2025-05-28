@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('body')
-<section class="hero-wrap hero-wrap-2" style="background-image: url({{ asset('assets/img/bg-1.jpg') }});"
+<section class="hero-wrap hero-wrap-2" style="background-image: url({{ asset('assets/img/bg-2.jpg') }});"
     data-stellar-background-ratio="0.5">
     <div class="overlay"></div>
     <div class="container">
@@ -62,6 +62,8 @@
                                     processing your order</p>
                                 @elseif($order->status === 'shipping')
                                 <p class="text-info mb-0"><i class="fas fa-truck"></i> Out for delivery</p>
+                                @elseif($order->status === 'not_paid')
+                                <p class="text-danger mb-0"><i class="fas fa-exclamation-circle"></i> Payment link requested</p>
                                 @endif
                             </div>
                         </div>

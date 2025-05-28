@@ -51,13 +51,27 @@ class CartController extends Controller
                 ]);
             }
 
-            $totalItems = Cart::where('user_id', $userId)->sum('quantity');
+            $totalItems = Cart::where('user_id', $userId)->count();
+
+            $cartItems = Cart::where('user_id', $userId)
+                ->with('product:id,name,price,image')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->product->name,
+                        'price' => $item->product->price,
+                        'image' => asset($item->product->image),
+                        'quantity' => $item->quantity,
+                    ];
+                });
 
             DB::commit();
 
             return response()->json([
                 'success' => 'Product added to cart successfully!',
-                'totalItems' => $totalItems
+                'totalItems' => $totalItems,
+                'items' => $cartItems
             ]);
         } catch (Exception $e) {
             DB::rollBack();
@@ -92,5 +106,12 @@ class CartController extends Controller
         $cartItem->delete();
 
         return redirect()->route('cart.show')->with('success', 'Item removed from cart successfully.');
+    }
+    public function clearCart()
+    {
+        $userId = Auth::id();
+        Cart::where('user_id', $userId)->delete();
+
+        return redirect()->route('cart.show')->with('success', 'Cart cleared successfully!');
     }
 }

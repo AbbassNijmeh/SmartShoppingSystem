@@ -35,7 +35,7 @@ class ReviewController extends Controller
             ]);
 
             // Manually update review count
-            $product->reviews_count = $product->review_count + 1;
+            $product->reviews_count = $product->reviews()->count();
             $product->rating = $product->reviews()->avg('rating');
 
             $product->save();
@@ -46,7 +46,7 @@ class ReviewController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Something went wrong. Please try again later.'
+                'error' => 'An error occurred while submitting the review: ' . $e->getMessage()
             ], 500);
         }
     }

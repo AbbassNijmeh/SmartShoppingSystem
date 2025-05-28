@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('body')
-<section class="hero-wrap hero-wrap-2" style="background-image: url({{asset('assets/img/bg-1.jpg')}});"
+<section class="hero-wrap hero-wrap-2" style="background-image: url({{asset('assets/img/bg-2.jpg')}});"
     data-stellar-background-ratio="0.5">
     <div class="overlay"></div>
     <div class="container">
@@ -134,18 +134,16 @@
                     </div>
                 </div>
             </div>
+            @empty
 
-        </div>
-        @empty
-        <div class="row">
             <div class="col-12 text-center">
                 <p>No products found matching your filters.</p>
             </div>
+            @endforelse
         </div>
-        @endforelse
 
         {{-- pagination links --}}
-        @if (!$filteredProducts->empty())
+        {{-- @if (!$filteredProducts->empty()) --}}
 
         <div class="block-27">
             <ul>
@@ -169,7 +167,7 @@
             </ul>
         </div>
 
-        @endif
+        {{-- @endif --}}
 </section>
 @endsection
 @push('script')

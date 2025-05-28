@@ -80,6 +80,8 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 20px;
         }
 
         #delivery-map {
@@ -143,6 +145,11 @@
         .order-items-collapse.collapsed {
             max-height: 0 !important;
         }
+
+        .orders-container {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
     </style>
 </head>
 
@@ -156,11 +163,21 @@
             </button>
         </div>
     </nav>
+    @if (session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
 
+    @if (session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
+    @endif
     <div class="container-fluid mt-4">
         <div class="row">
             <!-- Order List -->
-            <div class="col-lg-8">
+            <div class="col-lg-8 orders-container">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0">Upcoming Orders</h4>
                     <div class="search-container">
@@ -170,99 +187,111 @@
                 </div>
 
                 @if ($orders->isEmpty())
-                <div class="alert alert-info">
-                    No upcoming orders at the moment.
-                </div>
+                    <div class="alert alert-info">
+                        No upcoming orders at the moment.
+                    </div>
                 @else
-                @foreach ($orders as $order)
-                <div class="order-card" data-order-id="{{ $order->id }}" data-name="{{ $order->user->name }}"
-                    data-phone="{{ $order->user->phone }}" data-lat="{{ $order->userAddress->latitude }}"
-                    data-lng="{{ $order->userAddress->longtitude }}" data-address="@if($order->userAddress->location_link)
-                      {{ $order->userAddress->location_link }}
+                    @foreach ($orders as $order)
+                        <div class="order-card" data-order-id="{{ $order->id }}" data-name="{{ $order->user->name }}"
+                            data-phone="{{ $order->user->phone }}" data-lat="{{ $order->userAddress->latitude }}"
+                            data-lng="{{ $order->userAddress->longtitude }}"
+                            data-address="@if ($order->userAddress->location_link) {{ $order->userAddress->location_link }}
                    @elseif($order->userAddress->latitude && $order->userAddress->longtitude)
                       Coordinates: {{ $order->userAddress->latitude }}, {{ $order->userAddress->longtitude }}
                    @else
                       {{ $order->userAddress->street }},
                       {{ $order->userAddress->building }},
                       {{ $order->userAddress->city }},
-                      {{ $order->userAddress->country }}
-                   @endif">
+                      {{ $order->userAddress->country }} @endif">
 
-                    <p class="h5">{{ $order->user->name }}, Order #{{ $order->id }}</p>
-                    <p class="h5">Phone number: {{ $order->user->phone }}</p>
-                    <span class="badge bg-success status-badge">{{ ucfirst($order->status) }}</span>
+                            <p class="h5">{{ $order->user->name }}, Order #{{ $order->id }}</p>
+                            <p class="h5">Phone number: {{ $order->user->phone }}</p>
+                            <span class="badge bg-success status-badge">{{ ucfirst($order->status) }}</span>
 
-                    <p>
-                        @if ($order->userAddress->location_link)
-                        <a href="{{ $order->userAddress->location_link }}" target="_blank">
-                            {{ $order->userAddress->location_link }}
-                        </a>
-                        @elseif ($order->userAddress->latitude && $order->userAddress->longtitude)
-                        Coordinates: {{ $order->userAddress->latitude }}, {{ $order->userAddress->longtitude }}
-                        @else
-                        {{ $order->userAddress->street }}, {{ $order->userAddress->building }},
-                        {{ $order->userAddress->city }}, {{ $order->userAddress->country }}
-                        @endif
-                    </p>
+                            <p>
+                                @if ($order->userAddress->location_link)
+                                    <a href="{{ $order->userAddress->location_link }}" target="_blank">
+                                        {{ $order->userAddress->location_link }}
+                                    </a>
+                                @elseif ($order->userAddress->latitude && $order->userAddress->longtitude)
+                                    Coordinates: {{ $order->userAddress->latitude }},
+                                    {{ $order->userAddress->longtitude }}
+                                @else
+                                    {{ $order->userAddress->street }}, {{ $order->userAddress->building }},
+                                    {{ $order->userAddress->city }}, {{ $order->userAddress->country }}
+                                @endif
+                            </p>
 
-                    {{-- Total Price --}}
-                    <div class="total-price-card">
-                        <strong>Total Price:</strong>
-                        ${{ number_format($order->orderItems->sum(fn($item) => ($item->product->price ?? 0) *
-                        $item->quantity), 2) }}
-                    </div>
-
-                    {{-- Toggle Items --}}
-                    <button class="items-toggle-btn mt-2" onclick="toggleItems(this)">
-                        Show Items
-                    </button>
-
-                    {{-- Items List --}}
-                    <ul class="order-items-collapse collapsed mt-2">
-                        @foreach ($order->orderItems as $item)
-                        <li>{{ $item->quantity }} x {{ $item->product->name ?? 'Unknown Product' }}
-                        </li> @endforeach
-                    </ul>
-
-                    <a href="" class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#otpModal">
-                        Mark as Delivered
-                    </a>
-
-                </div>
-                <!-- OTP Modal -->
-                <div class="modal fade" id="otpModal" tabindex="-1" role="dialog" aria-labelledby="otpModalLabel"
-                    aria-hidden="true">
-                    <div class="modal-dialog" role="document">
-                        <form method="POST" action="{{ route('delivery.completed') }}">
-                            @csrf
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="otpModalLabel">Enter OTP to Confirm Delivery</h5>
-                                    <button type="button" class="close" data-bs-dismiss="modal" aria-bs-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="form-group">
-                                        <label for="otp">OTP</label>
-                                        <input type="text" name="otp" class="form-control" id="otp" required>
-                                    </div>
-                                    <input type="hidden" name="order_id" value="{{ $order->id }}">
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-primary">Confirm Delivery</button>
-                                </div>
+                            {{-- Total Price --}}
+                            <div class="total-price-card">
+                                <strong>Total Price:</strong>
+                                ${{ number_format($order->orderItems->sum(fn($item) => ($item->product->price ?? 0) * $item->quantity), 2) }}
                             </div>
-                        </form>
-                    </div>
-                </div>
-                @endforeach
+
+                            {{-- Toggle Items --}}
+                            <button class="items-toggle-btn mt-2" onclick="toggleItems(this)">
+                                Show Items
+                            </button>
+
+                            {{-- Items List --}}
+                            <ul class="order-items-collapse collapsed mt-2">
+                                @foreach ($order->orderItems as $item)
+                                    <li>{{ $item->quantity }} x {{ $item->product->name ?? 'Unknown Product' }}
+                                    </li>
+                                @endforeach
+                            </ul>
+
+                            <a href="" class="btn btn-primary mt-2" data-bs-toggle="modal"
+                                data-bs-target="#otpModal">
+                                Mark as Delivered
+                            </a>
+
+                            {{-- Resend OTP Form --}}
+                            <form method="POST" action="{{ route('delivery.resendOtp') }}" class="d-inline">
+                                @csrf
+                                <input type="hidden" name="order_id" value="{{ $order->id }}">
+                                <button type="submit" class="btn btn-warning mt-2">Resend OTP</button>
+                            </form>
+
+                        </div>
+                        <!-- OTP Modal -->
+                        <div class="modal fade" id="otpModal" tabindex="-1" role="dialog"
+                            aria-labelledby="otpModalLabel" aria-hidden="true">
+                            <div class="modal-dialog" role="document">
+                                <form method="POST" action="{{ route('delivery.completed') }}">
+                                    @csrf
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="otpModalLabel">Enter OTP to Confirm Delivery
+                                            </h5>
+                                            <button type="button" class="close" data-bs-dismiss="modal"
+                                                aria-bs-label="Close">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="form-group">
+                                                <label for="otp">OTP</label>
+                                                <input type="text" name="otp" class="form-control" id="otp"
+                                                    required>
+                                            </div>
+                                            <input type="hidden" name="order_id" value="{{ $order->id }}">
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary"
+                                                data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">Confirm Delivery</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    @endforeach
                 @endif
             </div>
 
             <!-- Map Panel -->
-            <div class="col-lg-4">
+            <div class="col-lg-4 map-container">
                 <h4>Delivery Route</h4>
                 <div id="delivery-map" style="height: 400px; border-radius: 10px;"></div>
                 <div class="delivery-info">
@@ -296,6 +325,8 @@
             </div>
         </div>
     </div>
+
+
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
@@ -369,9 +400,15 @@
                 draggableWaypoints: false,
                 fitSelectedRoutes: true,
                 lineOptions: {
-                    styles: [{color: '#007bff', opacity: 0.7, weight: 5}]
+                    styles: [{
+                        color: '#007bff',
+                        opacity: 0.7,
+                        weight: 5
+                    }]
                 },
-                createMarker: function() { return null; }
+                createMarker: function() {
+                    return null;
+                }
             }).addTo(map);
 
             routingControl.on('routesfound', e => {
@@ -393,7 +430,9 @@
 
             // Adjust map view to show all points
             const bounds = L.latLngBounds(waypoints);
-            map.fitBounds(bounds, {padding: [50, 50]});
+            map.fitBounds(bounds, {
+                padding: [50, 50]
+            });
         }
 
         // Highlight active order card
@@ -405,25 +444,24 @@
         // Initialize the map when page loads
         document.addEventListener('DOMContentLoaded', initMap);
         // Toggle order item visibility
-function toggleItems(button) {
-    const collapse = button.nextElementSibling;
-    const isCollapsed = collapse.classList.contains('collapsed');
-    collapse.classList.toggle('collapsed');
-    button.textContent = isCollapsed ? 'Hide Items' : 'Show Items';
-}
+        function toggleItems(button) {
+            const collapse = button.nextElementSibling;
+            const isCollapsed = collapse.classList.contains('collapsed');
+            collapse.classList.toggle('collapsed');
+            button.textContent = isCollapsed ? 'Hide Items' : 'Show Items';
+        }
 
-// Search filtering
-document.getElementById('orderSearch').addEventListener('input', function () {
-    const term = this.value.toLowerCase();
-    document.querySelectorAll('.order-card').forEach(card => {
-        const id = card.dataset.orderId.toString();
-        const name = card.dataset.name.toLowerCase();
-        const phone = card.dataset.phone.toLowerCase();
-        const visible = id.includes(term) || name.includes(term) || phone.includes(term);
-        card.style.display = visible ? '' : 'none';
-    });
-});
-
+        // Search filtering
+        document.getElementById('orderSearch').addEventListener('input', function() {
+            const term = this.value.toLowerCase();
+            document.querySelectorAll('.order-card').forEach(card => {
+                const id = card.dataset.orderId.toString();
+                const name = card.dataset.name.toLowerCase();
+                const phone = card.dataset.phone.toLowerCase();
+                const visible = id.includes(term) || name.includes(term) || phone.includes(term);
+                card.style.display = visible ? '' : 'none';
+            });
+        });
     </script>
 </body>
 

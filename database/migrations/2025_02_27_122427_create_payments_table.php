@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('payment_method', ['cash', 'credit_card', 'paypal', 'bank_transfer']);
+            $table->enum('payment_method', ['payment_link', 'credit_card', 'paypal', 'bank_transfer']);
             $table->decimal('total_amount', 10, 2);
             $table->softDeletes();
             $table->timestamps();

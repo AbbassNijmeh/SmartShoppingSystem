@@ -18,6 +18,7 @@ class Order extends Model
         'status',
         'user_address_id',
         'delivery_id',
+        'delivery_otp',
     ];
 
 

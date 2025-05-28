@@ -29,9 +29,26 @@ class WishlistController extends Controller
                 'product_id' => $productId,
             ]);
 
+            $wishlistItems = Wishlist::where('user_id', $user->id)
+                ->with('product')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->product->name,
+                        'image' => asset($item->product->image),
+                        'price' => number_format($item->product->price, 2),
+                        'quantity' => 1 // Default quantity for wishlist items
+                    ];
+                });
+
+            $totalItems = $wishlistItems->count();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Product added to wishlist.',
+                'message' => 'Product added to wishlist successfully!',
+                'totalItems' => $totalItems,
+                'items' => $wishlistItems
             ]);
         }
 

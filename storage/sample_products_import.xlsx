@@ -1,0 +1,4 @@
+ID,Name,Category ID,Cost Price,Selling Price,Stock Quantity,Brand,Discount,Discount Start,Discount End,Barcode,Description
+1,Sample Product 1,1,10.00,15.00,100,Brand A,10,2025-01-01,2025-12-31,1234567890123,This is a sample product.
+2,Sample Product 2,2,20.00,25.00,200,Brand B,15,2025-02-01,2025-11-30,1234567890124,Another sample product.
+3,Sample Product 3,3,30.00,35.00,300,Brand C,20,2025-03-01,2025-10-31,1234567890125,Yet another sample product.

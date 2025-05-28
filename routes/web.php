@@ -20,16 +20,18 @@ use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\IngredientController;
 
-Auth::routes();
+// Enable email verification routes
+Auth::routes(['verify' => true]);
 Route::get('/', [HomeController::class, 'showWelcome'])->name('home');
 
-Route::middleware(['auth', AdminMiddleware::class])->group(function () {
+Route::middleware(['auth', 'verified', AdminMiddleware::class])->group(function () {
     //make admin route
     Route::get('/admin', [HomeController::class, 'showDashboard'])->name('dashboard.index');
     Route::get('/admin/orders', [OrderController::class, 'Adminindex'])->name('orders.index');
     Route::delete('/admin/orders/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
     Route::get('/orders/monthly-data', [OrderController::class, 'monthlyData']);
-
+    Route::get('/top-products', [OrderController::class, 'topProducts']);
+    Route::get('/category-sales', [OrderController::class, 'categorySales']);
     //make show order route
     Route::get('/admin/admin-orders/{id}', [OrderController::class, 'AdminShow'])->name('admin.orders.show');
     Route::post('/admin/sendToDelivery', [OrderController::class, 'sendToDelivery'])->name('admin.orders.sendToDelivery');
@@ -45,11 +47,16 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::post('admin/products/restock', [ProductController::class, 'restock'])->name('products.restock');
     Route::delete('products/delete-pic', [ProductController::class, 'deletePic'])->name('products.deletePic');
 
+    // Routes for importing and exporting products
+    Route::post('/admin/products/download/import', [ProductController::class, 'import'])->name('products.import');
+    Route::get('/admin/products/download/export', [ProductController::class, 'export'])->name('products.export');
+
     // make categories route
     Route::get('/admin/categories', [CategoryController::class, 'Adminindex'])->name('categories.index');
     Route::post('admin/categories/store', [CategoryController::class, 'store'])->name('categories.store');
-    Route::delete('categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
-
+    Route::delete('admin/categories/{category}/delete', [CategoryController::class, 'destroy'])->name('categories.destroy');
+    route::get('admin/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
+    Route::put('admin/categories/{category}/update', [CategoryController::class, 'update'])->name('categories.update');
     //make users route
     Route::get('/admin/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/admin/users/{id}', [UserController::class, 'show'])->name('users.show');
@@ -89,7 +96,7 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     });
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/products', [HomeController::class, 'Products'])->name('products');
     Route::get('/filtered-products', [HomeController::class, 'showFilteredProducts'])->name('filtered.products');
     Route::get('/product/{id}', [HomeController::class, 'showProduct'])->name('product.show');
@@ -109,15 +116,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders/{order}', [OrderController::class, 'userShow'])->name('orders.show');
     Route::get('/profile', [HomeController::class, 'showUserProfile'])->name('profile.show');
     Route::put('/profile/update', [HomeController::class, 'userProfileUpdate'])->name('profile.update');
+    Route::get('/cart/clear', [CartController::class, 'clearCart'])->name('cart.clear');
 });
 Route::get('api/product-by-barcode', [ProductController::class, 'getProductByBarcode']);
 //delivery routes with middle ware
 Route::middleware(['auth', EnsureIsDelivery::class])->group(function () {
     Route::get('delivery', [DeliveryController::class, 'index'])->name('delivery.index');
     Route::post('/orders/order/delivery/completed', [DeliveryController::class, 'updateStatus'])->name('delivery.completed');
+    Route::post('/delivery/resend-otp', [DeliveryController::class, 'resendOtp'])->name('delivery.resendOtp');
 });
 
 use App\Http\Controllers\RecommendationController;
+
 Route::get('/recommend/upsell/{product}', [RecommendationController::class, 'recommendUpsell']);
 Route::get('/recommend/search', [RecommendationController::class, 'search']);
 Route::get('/recombee/sync-all-products', [RecommendationController::class, 'syncAllProducts']);
+Route::post('/checkout/request-payment-link', [PaymentController::class, 'generatePaymentLink'])->name('payment.link');
+Route::post('/orders/{order}/mark-as-paid', [PaymentController::class, 'markAsPaid'])->name('orders.markAsPaid');
+Route::post('/admin/orders/{order}/mark-as-paid', [OrderController::class, 'markAsPaid'])->name('admin.orders.markAsPaid');
