@@ -1,0 +1,21 @@
+# Ensure text files have consistent line endings
+* text=auto
+
+# Laravel specific files
+resources/* linguist-generated
+public/* linguist-generated
+storage/* linguist-generated
+vendor/* linguist-generated
+
+# Ignore binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+*.mp4 binary
+*.mp3 binary

@@ -1,0 +1,31 @@
+# Laravel specific files
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/.idea
+/.vscode
+.env
+.env.backup
+.phpunit.result.cache
+/.phpunit.result.cache
+/vendor
+
+# Ignoring log files
+/storage/logs/*.log
+
+# Ignoring compiled files
+/bootstrap/cache/*.php
+
+# Ignoring IDE and editor files
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log
+*.idea
+*.vscode
+
+# Ignoring system files
+.DS_Store
+Thumbs.db
